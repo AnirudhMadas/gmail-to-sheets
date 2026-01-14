@@ -1,10 +1,13 @@
-# python cache
+# Python
 __pycache__/
 *.pyc
 
-# virtual env
+# Virtual environment
 venv/
 
-# credentials
+# OAuth secrets/tokens
 credentials/credentials.json
 token.json
+
+# state storage file
+state.json

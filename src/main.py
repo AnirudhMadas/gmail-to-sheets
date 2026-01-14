@@ -1,51 +1,79 @@
+import json
+import os
+
+from config import STATE_FILE
 from src.gmail_services import (
     get_gmail_service,
-    list_unread_emails,
-    get_email_detail,
-    mark_email_as_read
+    fetch_unread_emails,
+    get_message,
+    mark_as_read
 )
-
-from src.email_parser import extract_email_data
 from src.sheets_services import get_sheets_service, append_row
+from src.email_parser import parse_email
 
+
+def load_state():
+    if not os.path.exists(STATE_FILE):
+        return {"processed_ids": []}
+
+    with open(STATE_FILE, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+def save_state(state):
+    with open(STATE_FILE, "w", encoding="utf-8") as f:
+        json.dump(state, f, indent=2)
 
 
 def main():
     print("✅ Starting Gmail → Sheets Automation...")
 
     gmail_service = get_gmail_service()
-
-    # creds inside gmail_service are stored internally,
-    # but easiest way: rebuild sheets using same gmail creds
     creds = gmail_service._http.credentials
     sheets_service = get_sheets_service(creds)
 
-    unread_emails = list_unread_emails(gmail_service, max_results=10)
+    state = load_state()
+    processed_ids = set(state.get("processed_ids", []))
 
-    if not unread_emails:
+    unread_messages = fetch_unread_emails(gmail_service)
+
+    if not unread_messages:
         print("📭 No unread emails found.")
         return
 
-    print(f"📩 Found {len(unread_emails)} unread emails...")
+    print(f"📩 Found {len(unread_messages)} unread emails...")
 
-    for msg in unread_emails:
-        message_id = msg["id"]
+    for item in unread_messages:
+        message_id = item["id"]
 
-        # Fetch full email
-        email_message = get_email_detail(gmail_service, message_id)
+        # ✅ duplicate prevention
+        if message_id in processed_ids:
+            print(f"⚠ Skipping duplicate email (already processed): {message_id}")
+            continue
 
-        # Parse email into sheet row
-        row = extract_email_data(email_message)
+        try:
+            msg = get_message(gmail_service, message_id)
 
-        # Append to Google Sheet
-        append_row(sheets_service, row)
-        print(f"✅ Logged email: {row[2]}")
+            # parse row: From, Subject, Date, Content
+            row = parse_email(msg)
 
-        # Mark email as read
-        mark_email_as_read(gmail_service, message_id)
-        print("✔ Marked as read\n")
+            # append to sheet
+            append_row(sheets_service, row)
+            print(f"✅ Logged email: {row[1]}")  # Subject
 
-    print("🎉 Done! All unread emails logged.")
+            # mark as read
+            mark_as_read(gmail_service, message_id)
+            print("✔ Marked as READ")
+
+            # save state
+            processed_ids.add(message_id)
+            state["processed_ids"] = list(processed_ids)
+            save_state(state)
+
+        except Exception as e:
+            print(f"❌ Error processing email ID {message_id}: {e}")
+
+    print("🎉 Done! All emails processed.")
 
 
 if __name__ == "__main__":

@@ -4,17 +4,22 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
 
-from config import SCOPES, CREDENTIALS_FILE, TOKEN_FILE, GMAIL_LABEL
+from config import (
+    SCOPES,
+    CREDENTIALS_FILE,
+    TOKEN_FILE,
+    GMAIL_LABEL,
+    EMAIL_QUERY,
+    MAX_EMAILS,
+)
 
 
 def get_gmail_service():
     creds = None
 
-    # Load token if exists
     if os.path.exists(TOKEN_FILE):
         creds = Credentials.from_authorized_user_file(TOKEN_FILE, SCOPES)
 
-    # If token missing/expired, create new
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
             creds.refresh(Request())
@@ -22,49 +27,34 @@ def get_gmail_service():
             flow = InstalledAppFlow.from_client_secrets_file(CREDENTIALS_FILE, SCOPES)
             creds = flow.run_local_server(port=0)
 
-        # Save token for future runs
-        with open(TOKEN_FILE, "w") as token:
-            token.write(creds.to_json())
+        with open(TOKEN_FILE, "w", encoding="utf-8") as f:
+            f.write(creds.to_json())
 
-    service = build("gmail", "v1", credentials=creds)
-    return service
+    return build("gmail", "v1", credentials=creds)
 
 
-def list_unread_emails(service, max_results=10):
-    """
-    Fetch unread emails from inbox.
-    """
+def fetch_unread_emails(service):
     results = service.users().messages().list(
         userId="me",
         labelIds=[GMAIL_LABEL],
-        q="is:unread",
-        maxResults=max_results
+        q=EMAIL_QUERY,
+        maxResults=MAX_EMAILS
     ).execute()
 
     return results.get("messages", [])
 
 
-def get_email_detail(service, message_id):
-    """
-    Get full email data by id.
-    """
-    message = service.users().messages().get(
+def get_message(service, message_id):
+    return service.users().messages().get(
         userId="me",
         id=message_id,
         format="full"
     ).execute()
 
-    return message
 
-
-def mark_email_as_read(service, message_id):
-    """
-    Remove UNREAD label from email
-    """
+def mark_as_read(service, message_id):
     service.users().messages().modify(
         userId="me",
         id=message_id,
-        body={
-            "removeLabelIds": ["UNREAD"]
-        }
+        body={"removeLabelIds": ["UNREAD"]}
     ).execute()

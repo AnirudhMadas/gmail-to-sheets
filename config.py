@@ -6,11 +6,18 @@ SCOPES = [
 CREDENTIALS_FILE = "credentials/credentials.json"
 TOKEN_FILE = "token.json"
 
-# ✅ Put your Google Sheet ID here
+# ✅ Put your real Google Sheet ID here
 SPREADSHEET_ID = "1qV2ZUCQVza70zFvvk7t7vfrXysaRUWQnDcYrDk0nPmk"
 
-# Sheet range where data will be appended
-SHEET_RANGE = "Sheet1!A:E"
+# Your sheet tab name must match (example: Sheet1)
+SHEET_RANGE = "Sheet1!A:D"
 
-# Gmail label to read from
+# Read from inbox + only unread
 GMAIL_LABEL = "INBOX"
+EMAIL_QUERY = "is:unread"
+
+# Only fetch limited emails per run
+MAX_EMAILS = 10
+
+# State persistence file (for duplicates prevention)
+STATE_FILE = "state.json"

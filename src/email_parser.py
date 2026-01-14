@@ -1,25 +1,64 @@
 import base64
 
 
-def get_header(headers, name):
+def _get_header(headers, name):
     for h in headers:
-        if h["name"].lower() == name.lower():
-            return h["value"]
+        if h.get("name", "").lower() == name.lower():
+            return h.get("value", "")
     return ""
 
 
-def extract_email_data(message):
+def _decode_base64(data):
+    if not data:
+        return ""
+    decoded_bytes = base64.urlsafe_b64decode(data.encode("utf-8"))
+    return decoded_bytes.decode("utf-8", errors="ignore")
+
+
+def _extract_plain_text(payload):
     """
-    Extract useful info from Gmail message response.
-    Returns: [date, from, subject, snippet, message_id]
+    Gmail emails can be:
+    - plain text only
+    - html only
+    - multipart with different parts
+    We want best possible plain text.
     """
+    if not payload:
+        return ""
+
+    mime_type = payload.get("mimeType", "")
+    body = payload.get("body", {})
+    data = body.get("data")
+
+    # ✅ If this part itself is text/plain
+    if mime_type == "text/plain" and data:
+        return _decode_base64(data)
+
+    # ✅ If it's multipart, search inside parts
+    parts = payload.get("parts", [])
+    for part in parts:
+        part_mime = part.get("mimeType", "")
+        part_body = part.get("body", {})
+        part_data = part_body.get("data")
+
+        if part_mime == "text/plain" and part_data:
+            return _decode_base64(part_data)
+
+    # fallback: maybe the root body has data
+    if data:
+        return _decode_base64(data)
+
+    return ""
+
+
+def parse_email(message):
     payload = message.get("payload", {})
     headers = payload.get("headers", [])
 
-    sender = get_header(headers, "From")
-    subject = get_header(headers, "Subject")
-    date = get_header(headers, "Date")
-    snippet = message.get("snippet", "")
-    message_id = message.get("id")
+    sender = _get_header(headers, "From")
+    subject = _get_header(headers, "Subject")
+    date = _get_header(headers, "Date")
+    content = _extract_plain_text(payload)
 
-    return [date, sender, subject, snippet, message_id]
+    # final row format: From | Subject | Date | Content
+    return [sender, subject, date, content]

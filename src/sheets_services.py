@@ -6,13 +6,10 @@ def get_sheets_service(creds):
     return build("sheets", "v4", credentials=creds)
 
 
-def append_row(sheets_service, row_data):
-    """
-    Append one row into Google Sheet
-    """
-    body = {"values": [row_data]}
+def append_row(service, row):
+    body = {"values": [row]}
 
-    sheets_service.spreadsheets().values().append(
+    service.spreadsheets().values().append(
         spreadsheetId=SPREADSHEET_ID,
         range=SHEET_RANGE,
         valueInputOption="RAW",

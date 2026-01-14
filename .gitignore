@@ -1,0 +1,10 @@
+# python cache
+__pycache__/
+*.pyc
+
+# virtual env
+venv/
+
+# credentials
+credentials/credentials.json
+token.json

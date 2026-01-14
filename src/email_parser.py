@@ -1,5 +1,7 @@
 import base64
 MAX_CELL_CHARS = 45000
+MAX_PREVIEW = 300
+
 
 def _get_header(headers, name):
     for h in headers:
@@ -59,5 +61,7 @@ def parse_email(message):
 
     if len(content) > MAX_CELL_CHARS:
         content = content[:MAX_CELL_CHARS] + "\n\n...[TRUNCATED]"
+    content = content.replace("\n", " ").strip()
+    content = content[:MAX_PREVIEW] + "..." if len(content) > MAX_PREVIEW else content
 
     return [sender, subject, date, content]

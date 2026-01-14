@@ -1,5 +1,5 @@
 import base64
-
+MAX_CELL_CHARS = 45000
 
 def _get_header(headers, name):
     for h in headers:
@@ -59,6 +59,10 @@ def parse_email(message):
     subject = _get_header(headers, "Subject")
     date = _get_header(headers, "Date")
     content = _extract_plain_text(payload)
+
+# ✅ prevent Google Sheets 50k cell limit error
+    if len(content) > MAX_CELL_CHARS:
+        content = content[:MAX_CELL_CHARS] + "\n\n...[TRUNCATED]"
 
     # final row format: From | Subject | Date | Content
     return [sender, subject, date, content]

@@ -46,7 +46,6 @@ def main():
     for item in unread_messages:
         message_id = item["id"]
 
-        # ✅ duplicate prevention
         if message_id in processed_ids:
             print(f"⚠ Skipping duplicate email (already processed): {message_id}")
             continue
@@ -54,18 +53,14 @@ def main():
         try:
             msg = get_message(gmail_service, message_id)
 
-            # parse row: From, Subject, Date, Content
             row = parse_email(msg)
 
-            # append to sheet
             append_row(sheets_service, row)
-            print(f"✅ Logged email: {row[1]}")  # Subject
+            print(f"✅ Logged email: {row[1]}") 
 
-            # mark as read
             mark_as_read(gmail_service, message_id)
             print("✔ Marked as READ")
 
-            # save state
             processed_ids.add(message_id)
             state["processed_ids"] = list(processed_ids)
             save_state(state)

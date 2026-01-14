@@ -30,11 +30,9 @@ def _extract_plain_text(payload):
     body = payload.get("body", {})
     data = body.get("data")
 
-    # ✅ If this part itself is text/plain
     if mime_type == "text/plain" and data:
         return _decode_base64(data)
 
-    # ✅ If it's multipart, search inside parts
     parts = payload.get("parts", [])
     for part in parts:
         part_mime = part.get("mimeType", "")
@@ -44,7 +42,6 @@ def _extract_plain_text(payload):
         if part_mime == "text/plain" and part_data:
             return _decode_base64(part_data)
 
-    # fallback: maybe the root body has data
     if data:
         return _decode_base64(data)
 
@@ -60,9 +57,7 @@ def parse_email(message):
     date = _get_header(headers, "Date")
     content = _extract_plain_text(payload)
 
-# ✅ prevent Google Sheets 50k cell limit error
     if len(content) > MAX_CELL_CHARS:
         content = content[:MAX_CELL_CHARS] + "\n\n...[TRUNCATED]"
 
-    # final row format: From | Subject | Date | Content
     return [sender, subject, date, content]

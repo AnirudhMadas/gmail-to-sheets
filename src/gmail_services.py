@@ -13,7 +13,6 @@ from config import (
     MAX_EMAILS,
 )
 
-
 def get_gmail_service():
     creds = None
 
